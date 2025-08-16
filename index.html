@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLBB Checker Integrated</title>
+    <title>MLBB Checker Integrated (Fixed)</title>
     <script src="https://cstaticdun.126.net/load.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -239,20 +239,17 @@
                         if (!err) {
                             tokens.push(data.validate);
                             updateTokenCounter();
-                            // Jika checker dijeda karena kehabisan token, lanjutkan otomatis
                             if (isChecking && pausedForToken) {
                                 pausedForToken = false;
                                 isPaused = false;
                                 logSimple('Token diterima! Melanjutkan proses pengecekan...', 'info');
                                 checkNextAccount();
                             }
-                            // Muat ulang captcha ini
                             setTimeout(() => loadCaptcha(captchaId, elementId), 500);
                         }
                     }
                 });
             }
-            // Inisialisasi 3 instance captcha
             loadCaptcha(captchaKey, "#captcha1");
             loadCaptcha(captchaKey, "#captcha2");
             loadCaptcha(captchaKey, "#captcha3");
@@ -331,7 +328,7 @@
                     logSimple(`Error pada ${accountLine}: ${e.message}`, 'error');
                 } finally {
                     stats.checked++; currentIndex++; updateStats();
-                    setTimeout(checkNextAccount, 500); // Jeda antar request
+                    setTimeout(checkNextAccount, 500);
                 }
             };
 
@@ -348,13 +345,29 @@
                 }
             };
             
+            // --- PERBAIKAN DI BAGIAN INI ---
             startButton.addEventListener('click', () => {
-                accounts = accountListEl.value.trim().split('\n').filter(Boolean);
-                if (accounts.length === 0) return alert('List akun tidak boleh kosong!');
-                if (tokens.length === 0) return alert('Selesaikan minimal satu captcha terlebih dahulu!');
-                
-                resetState();
+                // Bersihkan log dari pesan error sebelumnya jika ada
                 resultsLogEl.innerHTML = '';
+                
+                accounts = accountListEl.value.trim().split('\n').filter(line => line.trim() !== '');
+
+                // Cek #1: Validasi Akun
+                if (accounts.length === 0) {
+                    logSimple('GAGAL MEMULAI: List akun tidak boleh kosong. Silakan isi daftar akun terlebih dahulu.', 'error');
+                    alert('List akun tidak boleh kosong!');
+                    return; // Hentikan eksekusi
+                }
+
+                // Cek #2: Validasi Token
+                if (tokens.length === 0) {
+                    logSimple('GAGAL MEMULAI: Token CAPTCHA kosong. Selesaikan minimal satu CAPTCHA terlebih dahulu.', 'error');
+                    alert('Selesaikan minimal satu captcha terlebih dahulu!');
+                    return; // Hentikan eksekusi
+                }
+                
+                // Jika semua validasi lolos, baru jalankan proses
+                resetState(); // Reset state setelah validasi, bukan sebelumnya
                 stats.total = accounts.length;
                 isChecking = true;
                 logSimple(`Memulai pengecekan untuk ${stats.total} akun...`, 'info');
@@ -407,4 +420,4 @@
         });
     </script>
 </body>
-</html>
+    </html>
