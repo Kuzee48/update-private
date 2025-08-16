@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLBB Checker Integrated (v3 Fixed)</title>
+    <title>MLBB Checker FinalBoss</title>
     <script src="https://cstaticdun.126.net/load.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -51,66 +51,19 @@
 <body>
 
     <div class="main-container">
-        <div class="panel captcha-solver-panel">
-            <div class="card">
-                <div class="card-title">
-                    <span><i class="fas fa-shield-alt"></i> Captcha Solver</span>
-                    <span class="token-counter">Tokens: <span id="tokenCount">0</span></span>
-                </div>
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Selesaikan captcha untuk mengumpulkan token. Proses akan otomatis mengambil token dari sini.</p>
-                <div class="captcha-container"><div id="captcha1"></div></div>
-                <div class="captcha-container"><div id="captcha2"></div></div>
-                <div class="captcha-container"><div id="captcha3"></div></div>
-            </div>
-        </div>
-
-        <div class="panel control-panel">
-            <div class="card">
-                <h2 class="card-title"><i class="fas fa-cogs"></i> Kontrol & Input</h2>
-                <textarea id="accountList" rows="12" placeholder="Masukkan list akun di sini...&#10;Format: email:password"></textarea>
-                <div class="button-group">
-                    <button id="startButton"><i class="fas fa-play"></i> Mulai</button>
-                    <button id="pauseButton" disabled><i class="fas fa-pause"></i> Jeda</button>
-                    <button id="stopButton" disabled><i class="fas fa-stop"></i> Stop</button>
-                </div>
-            </div>
-            <div class="card">
-                <h2 class="card-title"><i class="fas fa-chart-line"></i> Statistik</h2>
-                <div class="stats-grid">
-                    <div class="stat-item">Total: <span id="totalCount">0</span></div>
-                    <div class="stat-item">Checked: <span id="checkedCount">0</span></div>
-                    <div class="stat-item valid">Valid: <span id="validCount">0</span></div>
-                    <div class="stat-item error">Error: <span id="errorCount">0</span></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="panel results-panel">
-            <div class="card">
-                <h2 class="card-title"><i class="fas fa-tasks"></i> Hasil Pengecekan</h2>
-                <div id="resultsLog">
-                    <div class="log-item-simple info">Selamat datang! Selesaikan captcha, masukkan list akun, lalu klik 'Mulai'.</div>
-                </div>
-                <div class="download-buttons">
-                    <button id="downloadValidButton"><i class="fas fa-download"></i> Download Valid</button>
-                    <button id="downloadOtherButton"><i class="fas fa-download"></i> Download Lainnya</button>
-                </div>
-            </div>
-        </div>
+        <div class="panel captcha-solver-panel"><div class="card"><div class="card-title"><span><i class="fas fa-shield-alt"></i> Captcha Solver</span><span class="token-counter">Tokens: <span id="tokenCount">0</span></span></div><p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:15px;">Selesaikan captcha untuk mengumpulkan token. Proses akan otomatis mengambil token dari sini.</p><div class="captcha-container"><div id="captcha1"></div></div><div class="captcha-container"><div id="captcha2"></div></div><div class="captcha-container"><div id="captcha3"></div></div></div></div>
+        <div class="panel control-panel"><div class="card"><h2 class="card-title"><i class="fas fa-cogs"></i> Kontrol & Input</h2><textarea id="accountList" rows="12" placeholder="Masukkan list akun di sini...&#10;Format: email:password"></textarea><div class="button-group"><button id="startButton"><i class="fas fa-play"></i> Mulai</button><button id="pauseButton" disabled><i class="fas fa-pause"></i> Jeda</button><button id="stopButton" disabled><i class="fas fa-stop"></i> Stop</button></div></div><div class="card"><h2 class="card-title"><i class="fas fa-chart-line"></i> Statistik</h2><div class="stats-grid"><div class="stat-item">Total: <span id="totalCount">0</span></div><div class="stat-item">Checked: <span id="checkedCount">0</span></div><div class="stat-item valid">Valid: <span id="validCount">0</span></div><div class="stat-item error">Error: <span id="errorCount">0</span></div></div></div></div>
+        <div class="panel results-panel"><div class="card"><h2 class="card-title"><i class="fas fa-tasks"></i> Hasil Pengecekan</h2><div id="resultsLog"><div class="log-item-simple info">Selamat datang! Selesaikan captcha, masukkan list akun, lalu klik 'Mulai'.</div></div><div class="download-buttons"><button id="downloadValidButton"><i class="fas fa-download"></i> Download Valid</button><button id="downloadOtherButton"><i class="fas fa-download"></i> Download Lainnya</button></div></div></div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- Konfigurasi ---
-            const REQUEST_DELAY_MS = 1000; // Delay 1 detik antar request, bisa diubah
-            
-            // --- Variabel Global & State ---
+            const REQUEST_DELAY_MS = 1000;
             let tokens = [];
             let accounts = [], currentIndex = 0, isChecking = false, isPaused = false, pausedForToken = false;
             let results = { valid: [], others: [] };
-            const stats = { total: 0, checked: 0, valid: 0, error: 0 };
+            let stats = { total: 0, checked: 0, valid: 0, error: 0 };
 
-            // --- Elemen DOM ---
             const accountListEl = document.getElementById('accountList');
             const startButton = document.getElementById('startButton');
             const pauseButton = document.getElementById('pauseButton');
@@ -121,7 +74,6 @@
             const tokenCountEl = document.getElementById('tokenCount');
             const counters = { total: document.getElementById('totalCount'), checked: document.getElementById('checkedCount'), valid: document.getElementById('validCount'), error: document.getElementById('errorCount') };
             
-            // --- LOGIC CAPTCHA ---
             const captchaKey = "fef5c67c39074e9d845f4bf579cc07af";
             const updateTokenCounter = () => { tokenCountEl.textContent = tokens.length; };
 
@@ -144,7 +96,6 @@
             }
             loadCaptcha(captchaKey, "#captcha1"); loadCaptcha(captchaKey, "#captcha2"); loadCaptcha(captchaKey, "#captcha3");
 
-            // --- LOGIC CHECKER ---
             const logSimple = (message, type) => {
                 const logItem = document.createElement('div');
                 logItem.className = `log-item-simple ${type}`;
@@ -165,11 +116,8 @@
             const updateStats = () => Object.keys(stats).forEach(key => counters[key].textContent = stats[key]);
             const setButtonsState = (start, pause, stop) => { startButton.disabled = !start; pauseButton.disabled = !pause; stopButton.disabled = !stop; };
             
-            const resetState = () => {
-                isChecking = isPaused = pausedForToken = false; currentIndex = 0; accounts = [];
-                Object.keys(stats).forEach(key => stats[key] = 0);
-                results.valid = []; results.others = [];
-                updateStats(); setButtonsState(true, false, false);
+            const fullReset = () => {
+                setButtonsState(true, false, false);
                 pauseButton.innerHTML = '<i class="fas fa-pause"></i> Jeda';
             };
             
@@ -177,7 +125,8 @@
                 if (!isChecking || isPaused) return;
                 if (currentIndex >= accounts.length) {
                     logSimple('🎉 Pengecekan Selesai Semua!', 'info');
-                    resetState(); return;
+                    fullReset();
+                    return;
                 }
                 if (tokens.length === 0) {
                     logSimple('<b>Token habis! Selesaikan captcha di sebelah kiri untuk melanjutkan...</b>', 'error');
@@ -219,36 +168,39 @@
                 }
             };
             
-            // --- PERBAIKAN UTAMA DI SINI ---
+            // --- LOGIKA UTAMA YANG DIPERBAIKI ---
             startButton.addEventListener('click', () => {
-                resultsLogEl.innerHTML = '';
-                
-                // 1. Menggunakan metode split yang lebih kuat untuk membaca semua jenis baris baru
-                accounts = accountListEl.value.split(/[\r\n]+/).filter(line => line.trim() !== '');
+                const parsedAccounts = accountListEl.value.split(/[\r\n]+/).filter(line => line.trim() !== '');
 
-                // 2. Log Diagnostik di Console Browser (Tekan F12 untuk melihat)
-                console.clear(); // Bersihkan console setiap kali mulai
+                console.clear();
                 console.log(`[DIAGNOSTIK] Tombol Mulai Ditekan.`);
-                console.log(`[DIAGNOSTIK] Ditemukan ${accounts.length} akun setelah parsing.`);
+                console.log(`[DIAGNOSTIK] Ditemukan ${parsedAccounts.length} akun setelah parsing.`);
                 console.log(`[DIAGNOSTIK] Ditemukan ${tokens.length} token yang tersedia.`);
 
-                if (accounts.length === 0) {
-                    logSimple('GAGAL MEMULAI: List akun kosong atau formatnya salah. Pastikan setiap akun ada di baris baru.', 'error');
+                if (parsedAccounts.length === 0) {
+                    logSimple('GAGAL MEMULAI: List akun kosong atau formatnya salah.', 'error');
                     alert('List akun kosong atau formatnya salah!');
                     return;
                 }
                 if (tokens.length === 0) {
-                    logSimple('GAGAL MEMULAI: Token CAPTCHA kosong. Selesaikan minimal satu CAPTCHA.', 'error');
+                    logSimple('GAGAL MEMULAI: Token CAPTCHA kosong.', 'error');
                     alert('Selesaikan minimal satu captcha terlebih dahulu!');
                     return;
                 }
                 
-                resetState();
-                stats.total = accounts.length;
+                // INISIALISASI STATE BARU (BUKAN RESET)
+                accounts = parsedAccounts; // PENTING: Gunakan variabel yang baru diparsing
+                currentIndex = 0;
                 isChecking = true;
-                logSimple(`Memulai pengecekan untuk ${stats.total} akun. Delay antar request: ${REQUEST_DELAY_MS / 1000} detik.`, 'info');
+                isPaused = false;
+                pausedForToken = false;
+                results = { valid: [], others: [] };
+                stats = { total: accounts.length, checked: 0, valid: 0, error: 0 };
+
+                resultsLogEl.innerHTML = '';
                 updateStats();
                 setButtonsState(false, true, true);
+                logSimple(`Memulai pengecekan untuk ${stats.total} akun. Delay antar request: ${REQUEST_DELAY_MS / 1000} detik.`, 'info');
                 checkNextAccount();
             });
 
@@ -261,10 +213,12 @@
             });
 
             stopButton.addEventListener('click', () => {
+                isChecking = false; // Hentikan loop
                 logSimple('Proses dihentikan oleh pengguna.', 'error');
-                resetState();
+                fullReset();
             });
 
+            // Sisa event listener lainnya (download, expand card)
             resultsLogEl.addEventListener('click', (e) => {
                 const summary = e.target.closest('.log-summary');
                 if (summary) {
@@ -275,7 +229,6 @@
                     icon.className = isExpanded ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
                 }
             });
-
             const downloadTxt = (filename, content) => {
                 const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
                 const link = document.createElement('a');
